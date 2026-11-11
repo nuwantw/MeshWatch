@@ -25,7 +25,7 @@ We will follow these rules:
 
 ## Status
 
-Proposed.
+Accepted.
 
 ## Consequences
 
