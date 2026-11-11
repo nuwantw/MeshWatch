@@ -1,6 +1,6 @@
 # ADR-0002: Conventional Commits
 
-**Status:** Exepted   
+**Status:** Accepted   
 **Date:** 2026-11-11  
 **Author:** Cothi
 
@@ -39,3 +39,5 @@ Examples:
 
 **Negative:**
 - Team members must follow the naming convention.
+- What if someone won't follow the rules? Can cause chaos 
+
