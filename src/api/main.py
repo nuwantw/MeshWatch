@@ -1,12 +1,21 @@
 """MeshWatch API - device status and historical sensor readings."""
 
 from datetime import datetime
+from pathlib import Path
 from typing import Literal
 
 from fastapi import FastAPI, HTTPException
+from fastapi.responses import FileResponse
 from pydantic import BaseModel
 
 app = FastAPI(title="MeshWatch API")
+
+# Locate the frontend directory in the repository root.
+FRONTEND_FILE = (
+    Path(__file__).resolve().parents[2]
+    / "frontend"
+    / "index.html"
+)
 
 
 class DeviceStatus(BaseModel):
@@ -27,6 +36,17 @@ class SensorReading(BaseModel):
 
 
 sensor_readings: list[SensorReading] = []
+
+
+@app.get("/", include_in_schema=False)
+async def dashboard():
+    if not FRONTEND_FILE.is_file():
+        raise HTTPException(
+            status_code=404,
+            detail="Dashboard frontend not found."
+        )
+
+    return FileResponse(FRONTEND_FILE)
 
 
 @app.get("/health")
@@ -57,7 +77,7 @@ async def add_reading(reading: SensorReading):
     ):
         raise HTTPException(
             status_code=422,
-            detail="At least one sensor value is required.",
+            detail="At least one sensor value is required."
         )
 
     sensor_readings.append(reading)
@@ -68,12 +88,14 @@ async def add_reading(reading: SensorReading):
 async def get_historical_readings(
     start_time: datetime | None = None,
     end_time: datetime | None = None,
-    sensor_type: Literal["temperature", "humidity", "light"] | None = None,
+    sensor_type: Literal[
+        "temperature", "humidity", "light"
+    ] | None = None,
 ):
     if start_time and end_time and start_time > end_time:
         raise HTTPException(
             status_code=400,
-            detail="Start time must be before or equal to end time.",
+            detail="Start time must be before or equal to end time."
         )
 
     results = sensor_readings
