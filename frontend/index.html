@@ -1,0 +1,233 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MeshWatch - Historical Sensor Data</title>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #f4f6f9;
+            margin: 0;
+            padding: 30px;
+            color: #263238;
+        }
+
+        .container {
+            max-width: 1100px;
+            margin: auto;
+        }
+
+        h1 {
+            color: #1565c0;
+        }
+
+        .card {
+            background: white;
+            padding: 25px;
+            border-radius: 10px;
+            margin-top: 25px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        }
+
+        select, button {
+            padding: 10px 15px;
+            border-radius: 5px;
+            border: 1px solid #ccc;
+            font-size: 15px;
+        }
+
+        button {
+            background: #1565c0;
+            color: white;
+            cursor: pointer;
+            border: none;
+        }
+
+        button:hover {
+            background: #0d47a1;
+        }
+
+        .chart-container {
+            position: relative;
+            height: 400px;
+        }
+
+        #message {
+            margin-top: 15px;
+            color: #555;
+        }
+    </style>
+</head>
+
+<body>
+<div class="container">
+
+    <h1>MeshWatch Dashboard</h1>
+    <p>Historical environmental sensor monitoring</p>
+
+    <div class="card">
+        <h2>Historical Sensor Data</h2>
+
+        <label for="sensorType">Select sensor:</label>
+
+        <select id="sensorType">
+            <option value="temperature">Temperature (°C)</option>
+            <option value="humidity">Humidity (%)</option>
+            <option value="light">Light (lux)</option>
+        </select>
+
+        <button onclick="loadReadings()">Load Data</button>
+
+        <p id="message">Select a sensor to view historical readings.</p>
+    </div>
+
+    <div class="card">
+        <h2 id="chartTitle">Temperature History</h2>
+
+        <div class="chart-container">
+            <canvas id="sensorChart"></canvas>
+        </div>
+    </div>
+
+</div>
+
+<script>
+    let sensorChart = null;
+
+    const sensorConfig = {
+        temperature: {
+            field: "temperature_c",
+            title: "Temperature History",
+            label: "Temperature (°C)"
+        },
+        humidity: {
+            field: "humidity_percent",
+            title: "Humidity History",
+            label: "Humidity (%)"
+        },
+        light: {
+            field: "light_lux",
+            title: "Light History",
+            label: "Light (lux)"
+        }
+    };
+
+    async function loadReadings() {
+        const sensorType =
+            document.getElementById("sensorType").value;
+
+        const config = sensorConfig[sensorType];
+        const message = document.getElementById("message");
+
+        message.textContent = "Loading sensor data...";
+
+        try {
+            const response = await fetch(
+                `/readings?sensor_type=${sensorType}`
+            );
+
+            if (!response.ok) {
+                throw new Error("Unable to retrieve sensor data.");
+            }
+
+            const readings = await response.json();
+
+            readings.sort((a, b) =>
+                new Date(a.timestamp) - new Date(b.timestamp)
+            );
+
+            const timestamps = readings.map(reading =>
+                new Date(reading.timestamp).toLocaleString()
+            );
+
+            const values = readings.map(reading =>
+                reading[config.field]
+            );
+
+            document.getElementById("chartTitle").textContent =
+                config.title;
+
+            if (sensorChart) {
+                sensorChart.destroy();
+                sensorChart = null;
+            }
+
+            if (readings.length === 0) {
+                message.textContent =
+                    "No historical readings available for this sensor.";
+                return;
+            }
+
+            message.textContent =
+                `${readings.length} historical readings loaded successfully.`;
+
+            const ctx = document
+                .getElementById("sensorChart")
+                .getContext("2d");
+
+            sensorChart = new Chart(ctx, {
+                type: "line",
+
+                data: {
+                    labels: timestamps,
+
+                    datasets: [{
+                        label: config.label,
+                        data: values,
+                        borderColor: "#1565c0",
+                        backgroundColor: "rgba(21,101,192,0.12)",
+                        borderWidth: 2,
+                        pointRadius: 4,
+                        pointBackgroundColor: "#1565c0",
+                        fill: true,
+                        tension: 0.3
+                    }]
+                },
+
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+
+                    interaction: {
+                        intersect: false,
+                        mode: "index"
+                    },
+
+                    scales: {
+                        x: {
+                            title: {
+                                display: true,
+                                text: "Timestamp"
+                            }
+                        },
+
+                        y: {
+                            title: {
+                                display: true,
+                                text: config.label
+                            },
+                            beginAtZero: false
+                        }
+                    }
+                }
+            });
+
+        } catch (error) {
+            message.textContent =
+                "Error loading sensor data: " + error.message;
+        }
+    }
+
+    document.getElementById("sensorType")
+        .addEventListener("change", loadReadings);
+
+    loadReadings();
+</script>
+
+</body>
+</html>
