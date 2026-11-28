@@ -1,0 +1,68 @@
+services:
+  node1:
+    build: .
+    environment:
+      MESHWATCH_NODE_ID: node-1
+      MESHWATCH_DATA_FILE: /data/node1.json
+      MESHWATCH_PEERS: http://node2:8000,http://node3:8000
+    volumes:
+      - node1-data:/data
+    ports:
+      - "8001:8000"
+
+  node1-simulator:
+    build: .
+    command: ["python", "-m", "src.sensor_simulator"]
+    environment:
+      MESHWATCH_NODE_ID: node-1
+      MESHWATCH_API_URL: http://node1:8000
+      MESHWATCH_INTERVAL_SECONDS: "5"
+    depends_on:
+      - node1
+
+  node2:
+    build: .
+    environment:
+      MESHWATCH_NODE_ID: node-2
+      MESHWATCH_DATA_FILE: /data/node2.json
+      MESHWATCH_PEERS: http://node1:8000,http://node3:8000
+    volumes:
+      - node2-data:/data
+    ports:
+      - "8002:8000"
+
+  node2-simulator:
+    build: .
+    command: ["python", "-m", "src.sensor_simulator"]
+    environment:
+      MESHWATCH_NODE_ID: node-2
+      MESHWATCH_API_URL: http://node2:8000
+      MESHWATCH_INTERVAL_SECONDS: "7"
+    depends_on:
+      - node2
+
+  node3:
+    build: .
+    environment:
+      MESHWATCH_NODE_ID: node-3
+      MESHWATCH_DATA_FILE: /data/node3.json
+      MESHWATCH_PEERS: http://node1:8000,http://node2:8000
+    volumes:
+      - node3-data:/data
+    ports:
+      - "8003:8000"
+
+  node3-simulator:
+    build: .
+    command: ["python", "-m", "src.sensor_simulator"]
+    environment:
+      MESHWATCH_NODE_ID: node-3
+      MESHWATCH_API_URL: http://node3:8000
+      MESHWATCH_INTERVAL_SECONDS: "9"
+    depends_on:
+      - node3
+
+volumes:
+  node1-data:
+  node2-data:
+  node3-data:

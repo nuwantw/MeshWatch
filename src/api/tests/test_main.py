@@ -2,16 +2,17 @@
 import pytest
 from fastapi.testclient import TestClient
 
-from src.api.main import app, sensor_readings, status_readings
+from src.api.main import app, sensor_readings, status_readings, STORE
 
 client = TestClient(app)
 
 
 @pytest.fixture(autouse=True)
 def clear_test_data():
-    """Clear stored data before every test."""
+    """Clear all in-memory and persisted test data."""
     sensor_readings.clear()
     status_readings.clear()
+    STORE.clear()
 
 
 # --------------------------------------------------

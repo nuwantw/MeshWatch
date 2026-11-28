@@ -61,6 +61,25 @@
             margin-top: 15px;
             color: #555;
         }
+
+        .status-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 12px;
+        }
+
+        .status-grid div {
+            border: 1px solid #dfe4ea;
+            border-radius: 6px;
+            padding: 12px;
+        }
+
+        .online { color: #1976d2; }
+        .offline { color: #c62828; }
+
+        ul {
+            padding-left: 20px;
+        }
     </style>
 </head>
 
@@ -84,6 +103,23 @@
         <button onclick="loadReadings()">Load Data</button>
 
         <p id="message">Select a sensor to view historical readings.</p>
+    </div>
+
+    <div class="card">
+        <h2>Node Operations</h2>
+        <div id="nodeInfo" class="status-grid">Loading node information...</div>
+        <button type="button" onclick="syncGossip()">Sync with peers</button>
+        <p id="syncMessage"></p>
+    </div>
+
+    <div class="card">
+        <h2>Node Status</h2>
+        <div id="statusList" class="status-grid">Loading statuses...</div>
+    </div>
+
+    <div class="card">
+        <h2>Active Alerts</h2>
+        <ul id="alertsList"><li>Loading alerts...</li></ul>
     </div>
 
     <div class="card">
@@ -223,10 +259,64 @@
         }
     }
 
+    async function loadOperations() {
+        const [nodeResponse, statusResponse, peerResponse, alertResponse] =
+            await Promise.all([
+                fetch("/node"),
+                fetch("/devices/status"),
+                fetch("/peers"),
+                fetch("/alerts")
+            ]);
+
+        const node = await nodeResponse.json();
+        const statuses = await statusResponse.json();
+        const peers = await peerResponse.json();
+        const alerts = await alertResponse.json();
+
+        document.getElementById("nodeInfo").innerHTML = `
+            <div><strong>Node</strong><br>${node.node_id}</div>
+            <div><strong>Known peers</strong><br>${peers.length}</div>
+        `;
+
+        document.getElementById("statusList").innerHTML = statuses.length
+            ? statuses.map(status => `
+                <div>
+                    <strong>${status.device_id}</strong><br>
+                    <span class="${status.online ? "online" : "offline"}">
+                        ${status.online ? "Online" : "Unavailable"}
+                    </span>
+                </div>
+            `).join("")
+            : "<div>No status reports yet.</div>";
+
+        document.getElementById("alertsList").innerHTML = alerts.length
+            ? alerts.map(alert => `
+                <li>${alert.device_id}: ${alert.sensor} ${alert.value} exceeded ${alert.threshold}</li>
+            `).join("")
+            : "<li>No active threshold alerts.</li>";
+    }
+
+    async function syncGossip() {
+        const message = document.getElementById("syncMessage");
+        message.textContent = "Syncing with peers...";
+        try {
+            const response = await fetch("/gossip/sync", { method: "POST" });
+            if (!response.ok) throw new Error("Sync request failed.");
+            const result = await response.json();
+            message.textContent = `${result.synced} readings added across ${result.peers} peers.`;
+            await loadOperations();
+            await loadReadings();
+        } catch (error) {
+            message.textContent = error.message;
+        }
+    }
+
     document.getElementById("sensorType")
         .addEventListener("change", loadReadings);
 
     loadReadings();
+    loadOperations();
+    setInterval(loadOperations, 10000);
 </script>
 
 </body>
